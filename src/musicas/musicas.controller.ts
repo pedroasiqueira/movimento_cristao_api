@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -21,9 +22,13 @@ export class MusicasController {
 
   // ---- Leitura pública (FR-10, FR-14, FR-21) ----
 
+  // ?incluir=despublicadas devolve o repertório inteiro: o site precisa das
+  // despublicadas para a página de aviso do FR-21 (o endereço nunca quebra).
   @Get()
-  findAll() {
-    return this.musicasService.findPublicadas();
+  findAll(@Query('incluir') incluir?: string) {
+    return incluir === 'despublicadas'
+      ? this.musicasService.findTodas()
+      : this.musicasService.findPublicadas();
   }
 
   @Get(':slug')

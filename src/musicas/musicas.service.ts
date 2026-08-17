@@ -19,7 +19,7 @@ export function gerarSlug(titulo: string): string {
     .trim()
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 }
@@ -51,6 +51,16 @@ export class MusicasService {
   findPublicadas() {
     return this.musicaModel
       .find({ despublicada: false })
+      .collation({ locale: 'pt' })
+      .sort({ titulo: 1 })
+      .exec();
+  }
+
+  // Repertório inteiro, despublicadas incluídas — o site usa para o aviso
+  // do FR-21. Elas ficam de fora só da LISTAGEM pública, não do dado.
+  findTodas() {
+    return this.musicaModel
+      .find()
       .collation({ locale: 'pt' })
       .sort({ titulo: 1 })
       .exec();
