@@ -1,0 +1,14 @@
+# dependências e build
+node_modules/
+dist/
+coverage/
+
+# ambiente — NUNCA versionar segredos (o .env.example é o modelo)
+.env
+
+# dados do Mongo local (docker compose)
+data/
+
+# diversos
+*.log
+.DS_Store

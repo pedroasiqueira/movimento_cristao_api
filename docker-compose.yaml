@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo
+    container_name: movimento_cristao_mongo
+    restart: 'no'
+    env_file: .env
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGODB_DATABASE}
+    ports:
+      # 27019 no host para não colidir com o Mongo do dacapo (27018)
+      - '27019:27017'
+    volumes:
+      - ./data:/data/db
+    networks:
+      - movimento-network
+
+networks:
+  movimento-network:
+    driver: bridge
