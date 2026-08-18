@@ -1,8 +1,10 @@
 /*
- * Seed da Fase 1 — carrega no Mongo o que hoje vive nos JSONs do projeto:
+ * Seed da Fase 1 — carrega no Mongo os JSONs versionados nesta API:
  *   node --require ts-node/register src/scripts/seed.ts [mensagens.json] [musicas.json]
- * Sem argumentos, lê os irmãos deste repositório:
- *   ../mensagens.json  e  ../movimento_cristao/src/data/musicas.json
+ * Sem argumentos, lê src/data/mensagens.json e src/data/musicas.json —
+ * a API semeia sozinha, sem depender do repositório do site ao lado.
+ * (mensagens.json é gerado por scripts/reconstruir_mensagens.py a partir
+ * do dump bruto em dados-brutos/.)
  * Idempotente: upsert por data (mensagens) e slug (músicas) — rodar de novo
  * atualiza em vez de duplicar. O admin vem de ADMIN_EMAIL/ADMIN_PASSWORD.
  */
@@ -70,7 +72,7 @@ async function main() {
 
   // Mensagens
   const caminhoMensagens = resolve(
-    process.argv[2] ?? resolve(__dirname, '../../../mensagens.json'),
+    process.argv[2] ?? resolve(__dirname, '../data/mensagens.json'),
   );
   const mensagens = JSON.parse(
     readFileSync(caminhoMensagens, 'utf8'),
@@ -96,8 +98,7 @@ async function main() {
 
   // Músicas
   const caminhoMusicas = resolve(
-    process.argv[3] ??
-      resolve(__dirname, '../../../movimento_cristao/src/data/musicas.json'),
+    process.argv[3] ?? resolve(__dirname, '../data/musicas.json'),
   );
   const musicas = JSON.parse(
     readFileSync(caminhoMusicas, 'utf8'),

@@ -6,8 +6,9 @@ coverage/
 # ambiente — NUNCA versionar segredos (o .env.example é o modelo)
 .env
 
-# dados do Mongo local (docker compose)
-data/
+# dados do Mongo local (docker compose) — só a pasta da raiz;
+# src/data/ (JSONs do seed) é versionado
+/data/
 
 # diversos
 *.log

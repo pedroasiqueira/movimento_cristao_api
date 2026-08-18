@@ -1,0 +1,81 @@
+[
+  {
+    "id": "exemplo-cancao-da-manha",
+    "titulo": "Canção da Manhã",
+    "exemplo": true,
+    "autores": ["Autoria de exemplo — substituir"],
+    "secoes": [
+      {
+        "tipo": "estrofe",
+        "linhas": [
+          "Quando o dia amanhece",
+          "e a luz vem me encontrar,",
+          "o meu coração agradece:",
+          "há um novo dia pra caminhar."
+        ]
+      },
+      {
+        "tipo": "refrao",
+        "linhas": [
+          "Caminhar, caminhar,",
+          "com o amor a me guiar.",
+          "Passo a passo, sem temer,",
+          "aprendendo a viver."
+        ]
+      },
+      {
+        "tipo": "estrofe",
+        "linhas": [
+          "Se a tarde vem cansada",
+          "e a sombra quer crescer,",
+          "a chama segue acesa:",
+          "é a paz no meu ser."
+        ]
+      },
+      {
+        "tipo": "refrao",
+        "linhas": [
+          "Caminhar, caminhar,",
+          "com o amor a me guiar.",
+          "Passo a passo, sem temer,",
+          "aprendendo a viver."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "exemplo-semente-de-paz",
+    "titulo": "Semente de Paz",
+    "exemplo": true,
+    "autores": [],
+    "secoes": [
+      {
+        "tipo": "estrofe",
+        "linhas": [
+          "Uma semente pequenina",
+          "plantada com afeição",
+          "cresce mansa, cresce firme,",
+          "floresce no coração."
+        ]
+      },
+      {
+        "tipo": "refrao",
+        "linhas": [
+          "Semear, semear a paz,",
+          "no gesto e na palavra.",
+          "O que se planta de manhã",
+          "à noite já se lavra."
+        ]
+      },
+      {
+        "tipo": "estrofe",
+        "linhas": [
+          "Não se colhe no apresso",
+          "o fruto da bondade:",
+          "colhe-se com paciência,",
+          "colhe-se em unidade."
+        ]
+      }
+    ]
+  }
+]
