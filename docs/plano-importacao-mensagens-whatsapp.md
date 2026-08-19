@@ -568,7 +568,10 @@ herança de tags, gravação das duas cópias, validação 1/dia, busca/encontro
 - [ ] Atlas: `.env` com ADMIN de PRODUÇÃO; backup `mensagens`+`musicas`+`usuarios`;
       seed (= go-live imediato); conferir produção — Etapa 8
 - [ ] Redeploy do site (fallback novo) + merge dos branches + commit das cópias
-- [ ] Etapa 9: espelho `interpretarMensagem.js`, mitigação do bundle, README
+- [x] Etapa 9: espelho `interpretarMensagem.js` (limitação registrada), README corrigido;
+      mitigação do bundle FEITA em 19/08/2026 via `import()` dinâmico do fallback em
+      `mensagens.js` (entrada ~100 KB gzip; reserva de 573 KB só baixa em falha da API).
+      Resta em aberto o payload do `GET /mensagens` (~2 MB/visita — §9-bis)
 
 ### Estado das pendências (rev. 3)
 
