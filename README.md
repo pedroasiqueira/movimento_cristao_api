@@ -12,7 +12,13 @@ npm run seed                # admin + mensagens + músicas dos JSONs do projeto
 npm run start:dev           # API em http://localhost:3000
 ```
 
-O seed lê, por padrão, `../mensagens.json` e `../movimento_cristao/src/data/musicas.json` (irmãos deste repositório). Outros caminhos: `npm run seed -- caminho/mensagens.json caminho/musicas.json`. É idempotente: rodar de novo atualiza em vez de duplicar.
+O seed lê, por padrão, `src/data/mensagens.json` e `src/data/musicas.json` (desta própria API). Outros caminhos: `npm run seed -- caminho/mensagens.json caminho/musicas.json`. É idempotente: rodar de novo atualiza em vez de duplicar. Atenção: além das mensagens, o seed também upserta o admin (com `ADMIN_*` do `.env`) e as músicas — confira o `.env` antes de rodá-lo contra produção.
+
+O `src/data/mensagens.json` (e a cópia-reserva empacotada no site) é gerado por `scripts/reconstruir_mensagens.py` a partir dos dumps brutos do WhatsApp. O histórico completo (jun/2023 em diante) vem da exportação oficial da conversa, que fica **fora do repositório** por privacidade (`../export-whatsapp.txt`; há trava no `.gitignore`). Comando canônico — a ordem dos dumps garante que o corpus curado vence em data repetida:
+
+```bash
+python3 scripts/reconstruir_mensagens.py dados-brutos/core.json ../export-whatsapp.txt
+```
 
 ## Rotas
 

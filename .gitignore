@@ -13,3 +13,8 @@ coverage/
 # diversos
 *.log
 .DS_Store
+
+# exportação bruta do WhatsApp — conversa pessoal, NUNCA versionar
+# (a fonte bruta fica FORA do repo: ../export-whatsapp.txt — decisão 19/08/2026)
+Conversa do WhatsApp*
+export-whatsapp*
