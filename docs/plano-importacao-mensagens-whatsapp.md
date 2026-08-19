@@ -1,5 +1,20 @@
 # Plano de implementação — importação das mensagens da exportação do WhatsApp
 
+> **Documento histórico — executado em 19/08/2026.** O que valeu depois da execução
+> está no `README.md`; este registro guarda a análise que sustentou as decisões.
+> **Rev. 4 (19/08/2026), pós-implementação:**
+> - A importação foi feita: 958 mensagens (21/06/2023 → 18/08/2026) no `mensagens.json`.
+> - **`dados-brutos/core.json` foi aposentado.** Conferido campo a campo: a exportação
+>   reproduz as 65 mensagens dele. A **fonte única** passou a ser `../export-whatsapp.txt`,
+>   e o parser não entende mais o formato antigo `[dd/mm, hh:mm]`. Toda menção abaixo a
+>   "dois dumps", "preferência de fonte" ou ao comando com `core.json` é histórica.
+> - Correção junto: com o core fora, apareceu um defeito de extração em 45 mensagens de
+>   jun–ago/2026 (rodapé em linhas adjacentes embaralhava proveniência/canal). O rodapé
+>   passou a ser classificado por linha; ver `scripts/testar_extracao.py`.
+> - Fixture de teste versionada em `dados-brutos/` (amostra + gabarito), já que a fonte
+>   real não pode entrar no repositório público.
+> - §9-bis: mitigação do bundle feita com `import()` dinâmico da reserva no site.
+>
 > Documento de referência produzido a partir da análise de 18–19/08/2026.
 > **Rev. 3 (19/08/2026).** Histórico:
 > - Rev. 1: análise inicial (conversa + código).

@@ -1,36 +1,35 @@
 #!/usr/bin/env python3
 """
-Reconstrói o mensagens.json INTEIRO a partir dos dumps brutos do WhatsApp
-— decisão do Pedro (17/08/2026): o dump é a fonte única e sobrescreve tudo;
-as marcas de formatação (*negrito*, _itálico_) são preservadas no corpo,
-porque o site as renderiza.
+Reconstrói o mensagens.json INTEIRO a partir da exportação oficial do WhatsApp
+— FONTE ÚNICA DE VERDADE desde 19/08/2026. As marcas de formatação (*negrito*,
+_itálico_) são preservadas no corpo, porque o site as renderiza.
 
-Dois formatos de dump, detectados POR LINHA (podem coexistir):
-  core        [dd/mm, hh:mm] Nome: ...        (sem ano; assume ANO = 2026)
-  exportação  dd/mm/aaaa hh:mm - Nome: ...    ("Exportar conversa" oficial)
+Formato lido (linhas de "Exportar conversa" sem mídia):
+  dd/mm/aaaa hh:mm - Nome: conteúdo
 
 Uso (da raiz do movimento_cristao_api):
-  python3 scripts/reconstruir_mensagens.py [dump1 dump2 ...]
-  (default: dados-brutos/core.json)
+  python3 scripts/reconstruir_mensagens.py [export1 export2 ...]
+  (default: ../export-whatsapp.txt)
 
-Comando canônico da importação completa — A ORDEM DOS ARGUMENTOS GARANTE a
-preferência de fonte (em data repetida entre fontes vence quem chega antes,
-isto é, o core, que é o corpus já curado):
-  python3 scripts/reconstruir_mensagens.py dados-brutos/core.json ../export-whatsapp.txt
+O arquivo fica FORA do repositório por decisão de privacidade (19/08/2026): o
+cru contém a conversa pessoal e os repositórios são públicos — o .gitignore tem
+trava para ele nunca entrar, e o original está guardado no Drive do Pedro. Para
+teste automatizado há uma amostra versionada (dados-brutos/amostra-export.txt,
+só bolhas assinadas) exercitada por scripts/testar_extracao.py.
 
-O caminho da exportação fica FORA do repositório (../export-whatsapp.txt) por
-decisão de privacidade (19/08/2026): o arquivo cru contém a conversa pessoal e
-os repositórios são públicos. O .gitignore tem trava para ele nunca entrar.
+O dump manual antigo (dados-brutos/core.json, jun–ago/2026) foi aposentado em
+19/08/2026: conferido campo a campo, a exportação reproduz as 65 mensagens dele
+— e o histórico inteiro desde 21/06/2023.
 
-Pipeline da exportação: filtro por assinatura (tolerante a typos) → extração
-por características (4 eras de layout + layout de domingo) → decisões
-editoriais → preferência de fonte → dedup por corpo extraído → validação
-1 msg/dia (aborta ANTES de gravar, propondo remapeamentos prontos para colar
-em REMAPEAR) → sanidade + leak-check → herança de tags → gravação das duas
-cópias. Relatório completo em ../relatorio-importacao-whatsapp.txt.
+Pipeline: filtro por assinatura (tolerante a typos) → extração por
+características (4 eras de layout + layout de domingo) → decisões editoriais →
+dedup por corpo extraído → validação 1 msg/dia (aborta ANTES de gravar,
+propondo remapeamentos prontos para colar em REMAPEAR) → sanidade + leak-check
+→ herança de tags → gravação das duas cópias. Relatório completo em
+../relatorio-importacao-whatsapp.txt.
 
-Estrutura de cada bloco do core:
-  [dd/mm, hh:mm] Nome: *TÍTULO*            -> titulo (sem marcas)
+Estrutura reconhecida em cada bolha:
+  *TÍTULO*                                 -> titulo (sem marcas)
   _Arca da Sagrada Aliança – ..._          -> assinatura (sem marcas)
   ... corpo com marcas preservadas ...     -> corpo
   *(Mensagem revelada pelo Espírito...)*   \
@@ -38,13 +37,12 @@ Estrutura de cada bloco do core:
   *(A Arca ... é apenas o canal ...)*      -> canal (sem marcas)
 
 "Medite e pense nisto." (e variantes) permanece no corpo. As tags não existem
-nos dumps: são herdadas do mensagens.json anterior por (data, título). Grava
+na exportação: são herdadas do mensagens.json anterior por (data, título). Grava
 as DUAS cópias do JSON (src/data/ desta API, lida pelo seed; e a do repositório
 irmão movimento_cristao/src/data/, empacotada no site como reserva) — elas
 precisam mudar juntas.
 """
 
-import difflib
 import json
 import re
 import sys
@@ -58,17 +56,14 @@ COPIAS = [
     RAIZ_API / 'src/data/mensagens.json',
     RAIZ_API.parent / 'movimento_cristao/src/data/mensagens.json',
 ]
-DUMP_PADRAO = RAIZ_API / 'dados-brutos/core.json'
+DUMP_PADRAO = RAIZ_API.parent / 'export-whatsapp.txt'
 RELATORIO = RAIZ_API.parent / 'relatorio-importacao-whatsapp.txt'
-ANO = 2026
 
 # ------------------------- decisões editoriais -------------------------
-# Do Pedro (17/08/2026), sobre as ambiguidades do dump core:
+# Do Pedro (17/08/2026), sobre as ambiguidades de jun–ago/2026:
 # - "O REINO DOS CÉUS" de 10/06 é retransmissão idêntica à de 19/06 — sai.
 # - "A JUSTIÇA DIVINA" veio junto de outra mensagem em 01/07; vai para o
 #   dia vago 30/06 (não-domingo sem mensagem).
-# As chaves (data, título) valem para as DUAS fontes — a cópia da exportação
-# recebe a mesma decisão.
 DESCARTAR = {('2026-06-10', 'o reino dos ceus')}
 REMAPEAR = {
     ('2026-07-01', 'a justica divina'): '2026-06-30',
@@ -147,7 +142,6 @@ ESPERADO = {
     'estritas': 995,
 }
 
-CAB_CORE = re.compile(r'^\[(\d{2})/(\d{2}), \d{2}:\d{2}\] [^:]+: (.*)$')
 CAB_EXPORT = re.compile(r'^(\d{2})/(\d{2})/(\d{4}) (\d{2}:\d{2}) - (.*)$')
 
 
@@ -171,69 +165,7 @@ def chave_titulo(titulo):
     return re.sub(r'\s+', ' ', plano).strip().casefold()
 
 
-# ----------------------- formato core (inalterado) -----------------------
-
-def eh_proveniencia(linha):
-    plano = sem_marcas(linha)
-    if 'canal' in plano:
-        return False
-    if 'Espírito da Verdade' in plano or 'João 16:12' in plano:
-        return True
-    # Linha inteira de referências bíblicas entre parênteses, ex.:
-    # "(João 14:6; João 11:25-26; Mateus 5:8)" — variante de proveniência.
-    return bool(re.fullmatch(r'\((?:[A-ZÀ-Ü][a-zà-ü]+ \d+[\d:;,.\-– ]*)+\)', plano))
-
-
-def eh_canal(linha):
-    plano = sem_marcas(linha)
-    return 'Arca' in plano and 'canal' in plano
-
-
-def interpretar_bloco(bloco):
-    linhas = [l.rstrip() for l in bloco['linhas']]
-
-    titulo = sem_marcas(linhas[0])
-
-    corpo = linhas[1:]
-    while corpo and not corpo[0].strip():
-        corpo.pop(0)
-
-    assinatura = None
-    if corpo and 'Arca da Sagrada Aliança' in corpo[0] and len(corpo[0]) < 120:
-        assinatura = sem_marcas(corpo.pop(0))
-
-    # Rodapé: só as linhas institucionais CONTÍGUAS no fim — "Espírito da
-    # Verdade" também aparece em citações no meio do corpo e não pode sair.
-    # Alguns blocos (02–06/06) repetem a assinatura antes do rodapé; ela é
-    # descartada para não duplicar no corpo.
-    proveniencia, canal = [], None
-    while corpo:
-        ultima = corpo[-1].strip()
-        if not ultima:
-            corpo.pop()
-        elif canal is None and eh_canal(ultima):
-            canal = sem_marcas(corpo.pop())
-        elif eh_proveniencia(ultima):
-            proveniencia.insert(0, sem_marcas(corpo.pop()))
-        elif assinatura and sem_marcas(ultima).rstrip('.') == assinatura.rstrip('.'):
-            corpo.pop()
-        else:
-            break
-
-    texto_corpo = normalizar_emendas('\n'.join(corpo))
-    texto_corpo = re.sub(r'\n{3,}', '\n\n', texto_corpo).strip()
-
-    return {
-        'data': bloco['data'],
-        'titulo': titulo,
-        'corpo': texto_corpo,
-        'assinatura': assinatura,
-        'proveniencia': ' '.join(proveniencia) or None,
-        'canal': canal,
-    }
-
-
-# --------------------- formato exportação (novo) ---------------------
+# --------------------- extração da exportação ---------------------
 
 def norm_filtro(texto):
     """Normalização agressiva para detecção de assinatura e dedup: sem
@@ -266,6 +198,10 @@ PROV_CHAVES = ('espirito da verdade', 'espirito santo', 'joao 16', 'salmo',
                'mensagem inspirada')
 RE_REFS = re.compile(r'^[a-z0-9 :;,.•\-]*\d+:\d+[a-z0-9 :;,.•\-]*$')
 RE_SAUDACAO = re.compile(r'^(bom dia|boa tarde|boa noite)\b')
+# Fecho do ensinamento ("Medite e pense nisto.", "Medita em silêncio…",
+# "Reflita.", "Pense nisto."): é CORPO, mesmo quando o WhatsApp o cola na
+# mesma linha física do rodapé.
+RE_FECHO = re.compile(r'^(medit|pens[ae]|reflit|reflet|contempl)')
 RE_TITULO_ESTRELA = re.compile(r'^\*([^*]+)\*[.\s]*(.*)$')
 RE_FRASE_INICIAL = re.compile(r'^(.{2,120}?)([.?!…])\s*(.*)$', re.S)
 # Cauda "(Arca ...)" no fim do último parágrafo — o miolo tolera quebra de
@@ -299,11 +235,65 @@ def separar_prov_canal(par):
     """Bloco único com proveniência E canal (ex.: 05/01/2026, 20/04/2026):
     "(Mensagem inspirada pelo Espírito Santo. A Arca ... é apenas o canal.)"
     Divide por sentença: as com Arca+canal/instrumento viram canal."""
-    plano = achatar(par).strip('()')
-    partes = re.split(r'(?<=[.!?])\s+', plano)
+    inteiro = achatar(par)
+    partes = re.split(r'(?<=[.!?])\s+', inteiro.strip('()'))
     canal = [p for p in partes if eh_bloco_canal(norm_filtro(p))]
     prov = [p for p in partes if p not in canal]
-    return ' '.join(prov).strip() or None, ' '.join(canal).strip() or None
+    # Só há o que separar quando os dois campos aparecem: com um campo só, o
+    # bloco fica como veio — tirar os parênteses externos seria mutilá-lo.
+    if not prov:
+        return None, inteiro
+    if not canal:
+        return inteiro, None
+    return ' '.join(prov).strip(), ' '.join(canal).strip()
+
+
+def parentese_solto(texto):
+    """Tira `(` inicial ou `)` final que ficaram sem par — acontece quando a
+    linha era parte de um bloco entre parênteses partido pelo WhatsApp."""
+    t = texto.strip()
+    if t.startswith('(') and t.count('(') > t.count(')'):
+        t = t[1:].lstrip()
+    if t.endswith(')') and t.count(')') > t.count('('):
+        t = t[:-1].rstrip()
+    return t.strip()
+
+
+def linha_autocontida(linha):
+    """A linha é um item inteiro do rodapé (e não um pedaço de bloco que o
+    WhatsApp quebrou no meio da frase): termina em pontuação de fecho e tem
+    os parênteses balanceados."""
+    plano = sem_marcas(linha)
+    return bool(re.search(r'[.!?…)”"]$', plano)) and plano.count('(') == plano.count(')')
+
+
+def separar_rodape_por_linha(par):
+    """Rodapé cujas linhas físicas são itens independentes coladas sem linha
+    em branco (comum a partir de jun/2026):
+
+        *(Mensagem revelada pelo Espírito da Verdade.)*
+        _(João 16:12-14 • Marcos 12:29-31)_
+        *A Arca ... é apenas o canal.*
+
+    Classificar o parágrafo inteiro de uma vez embaralharia os campos, então
+    cada linha é classificada sozinha. Devolve (proveniencia, canal) ou None
+    quando alguma linha não se classifica — aí o chamador usa a regra antiga
+    (blocos únicos multilinha, como os de 05/01 e 20/04/2026)."""
+    linhas = [l.strip() for l in par.split('\n') if l.strip()]
+    if len(linhas) < 2:
+        return None
+    prov, canal = [], []
+    for linha in linhas:
+        if len(linha) > 250 or not linha_autocontida(linha):
+            return None
+        n = norm_filtro(linha)
+        if eh_bloco_canal(n):
+            canal.append(achatar(linha))
+        elif eh_bloco_prov(n):
+            prov.append(achatar(linha))
+        else:
+            return None
+    return (' '.join(prov).strip() or None, ' '.join(canal).strip() or None)
 
 
 def so_letras(texto):
@@ -414,19 +404,42 @@ def interpretar_bloco_export(bloco):
             flags.append(f'saudação removida do rodapé: {par!r}')
             del corpo[i:]
         elif len(par) <= 420 and eh_can and eh_pro:
-            pro, can = separar_prov_canal(par)
+            # Linhas coladas (jun/2026 em diante) precisam ser classificadas
+            # uma a uma; só o bloco único multilinha cai na regra por sentença.
+            porlinha = separar_rodape_por_linha(par)
+            pro, can = porlinha if porlinha else separar_prov_canal(par)
             if pro:
-                proveniencia.insert(0, pro)
+                proveniencia.insert(0, parentese_solto(pro))
             if can and canal is None:
-                canal = can
+                canal = parentese_solto(can)
             del corpo[i:]
         elif len(par) <= 420 and eh_can:
             if canal is None:
                 canal = achatar(par)
             del corpo[i:]
         elif len(par) <= 420 and eh_pro:
-            proveniencia.insert(0, achatar(par))
-            del corpo[i:]
+            # O parágrafo pode trazer, coladas no topo, linhas que NÃO são
+            # proveniência: o fecho ("Medite e pense nisto.") — que é corpo —
+            # e a assinatura repetida antes do rodapé.
+            # Só descasca o que reconhece: fecho volta ao corpo, assinatura
+            # repetida sai. Qualquer outra linha (ex.: a citação bíblica que
+            # abre a proveniência em 12/07/2025) segue como proveniência.
+            linhas_par = par.split('\n')
+            fica_no_corpo = []
+            while len(linhas_par) > 1:
+                topo = linhas_par[0].strip()
+                n_topo = norm_filtro(topo)
+                if eh_bloco_prov(n_topo) or len(topo) > 250:
+                    break
+                if tem_assinatura(n_topo, flex=True):
+                    flags.append('assinatura final repetida removida')
+                elif RE_FECHO.match(n_topo):
+                    fica_no_corpo.append(linhas_par[0])
+                else:
+                    break
+                linhas_par.pop(0)
+            proveniencia.insert(0, achatar('\n'.join(linhas_par)))
+            corpo[i:] = fica_no_corpo
         else:
             m = RE_PARENTESE_CAUDA.search(par)
             if m and tem_assinatura(norm_filtro(m.group(1)), flex=True):
@@ -486,18 +499,12 @@ def interpretar_bloco_export(bloco):
 # ----------------------------- pipeline -----------------------------
 
 def separar_blocos(texto):
-    """Fatia um dump em blocos, detectando o formato POR LINHA. Linhas de
-    continuação não repetem cabeçalho (zero falsos cabeçalhos no arquivo,
-    verificado no plano §3). O remetente da exportação é o trecho antes do
-    PRIMEIRO ": "; sem ": " é linha de sistema (criptografia)."""
+    """Fatia a exportação em bolhas. Linhas de continuação não repetem o
+    cabeçalho (zero falsos cabeçalhos no arquivo, verificado no plano §3). O
+    remetente é o trecho antes do PRIMEIRO ": "; sem ": " é linha de sistema
+    (o aviso de criptografia que abre a conversa)."""
     blocos = []
     for linha in texto.split('\n'):
-        m = CAB_CORE.match(linha)
-        if m:
-            dd, mm, resto = m.groups()
-            blocos.append({'fonte': 'core', 'data': f'{ANO}-{mm}-{dd}',
-                           'hora': '', 'linhas': [resto]})
-            continue
         m = CAB_EXPORT.match(linha)
         if m:
             dd, mm, aaaa, hora, resto = m.groups()
@@ -505,11 +512,9 @@ def separar_blocos(texto):
                 remetente, conteudo = resto.split(': ', 1)
             else:
                 remetente, conteudo = None, resto
-            blocos.append({'fonte': 'export', 'data': f'{aaaa}-{mm}-{dd}',
-                           'hora': hora, 'remetente': remetente,
-                           'linhas': [conteudo]})
-            continue
-        if blocos:
+            blocos.append({'data': f'{aaaa}-{mm}-{dd}', 'hora': hora,
+                           'remetente': remetente, 'linhas': [conteudo]})
+        elif blocos:
             blocos[-1]['linhas'].append(linha)
     return blocos
 
@@ -537,7 +542,7 @@ def propor_remapeamentos(conflitos, ocupadas, minimo):
     preferindo dias ANTERIORES. Alocação gulosa em ordem cronológica."""
     propostas, sem_vaga = [], []
     for dia in sorted(conflitos):
-        regs = sorted(conflitos[dia], key=lambda r: (r['fonte'] != 'core', r['hora']))
+        regs = sorted(conflitos[dia], key=lambda r: r['hora'])
         manter, mover = regs[-1], regs[:-1]
         for reg in mover:
             base = date.fromisoformat(dia)
@@ -562,6 +567,10 @@ def main():
 
     blocos = []
     for dump in dumps:
+        if not dump.exists():
+            sys.exit(f'ERRO: exportação não encontrada em {dump}. O arquivo fica '
+                     f'fora do repositório (privacidade); baixe-o do Drive ou '
+                     f'passe o caminho como argumento.')
         blocos += separar_blocos(dump.read_text(encoding='utf-8'))
 
     rel = []           # linhas do relatório
@@ -575,17 +584,12 @@ def main():
         r(f'  {nome}: {valor} {ok}')
 
     # ---------- filtro da exportação ----------
-    export = [b for b in blocos if b['fonte'] == 'export']
     ruido = Counter()
     descartes_filtro = []          # (bloco, motivo)
     registros = []                 # dicts: entrada extraída + metadados
     n_estritas = 0
 
     for b in blocos:
-        if b['fonte'] == 'core':
-            registros.append({'fonte': 'core', 'hora': '', 'data_original': b['data'],
-                              'entrada': interpretar_bloco(b), 'flags': []})
-            continue
         txt = '\n'.join(b['linhas']).strip()
         cat = categoria_ruido(txt)
         if b.get('remetente') is None:
@@ -611,40 +615,35 @@ def main():
             b['linhas'][0] = LINHA1_MANUAL[chave_bolha]
             extras.append('1ª linha substituída à mão (preâmbulo pessoal removido)')
         entrada, flags = interpretar_bloco_export(b)
-        registros.append({'fonte': 'export', 'hora': b['hora'],
-                          'data_original': b['data'], 'entrada': entrada,
-                          'flags': flags + extras, 'allowlist': not passou_filtro})
+        registros.append({'hora': b['hora'], 'data_original': b['data'],
+                          'entrada': entrada, 'flags': flags + extras,
+                          'allowlist': not passou_filtro})
 
-    candidatas = [reg for reg in registros if reg['fonte'] == 'export']
-    r('RELATÓRIO DA IMPORTAÇÃO — exportação do WhatsApp')
-    r(f'Dumps (a ordem define a preferência de fonte): '
-      + ', '.join(str(d) for d in dumps))
+    r('RELATÓRIO DA IMPORTAÇÃO — exportação do WhatsApp (fonte única)')
+    r('Fonte: ' + ', '.join(str(d) for d in dumps))
     r()
     r('— Filtro (metas do plano §3) —')
-    if export:
-        meta('bolhas', len(export))
-        for nome in ('mídia oculta', 'mensagem apagada', 'ligação', 'vazia'):
-            meta(nome, ruido.get(nome, 0))
-        pelo_filtro = [reg for reg in candidatas if not reg.get('allowlist')]
-        meta('candidatas', len(pelo_filtro))
-        meta('estritas', n_estritas)
-        r(f'  incluídas por allowlist (além do filtro): {len(candidatas) - len(pelo_filtro)}')
-        anos = Counter(reg['data_original'][:4] for reg in pelo_filtro)
-        r(f'  candidatas por ano: {dict(sorted(anos.items()))} '
-          f'(esperado 166/315/311/205 = estritas 165/315/310/205 + 2 typos)')
-        notaveis = [(b, m) for b, _, m in descartes_filtro
-                    if (b['data'], b['hora']) in NAO_ASSINADAS_NOTAVEIS]
-        r('  casos notáveis fora do filtro:')
-        for b, m in notaveis:
-            r(f'    • {b["data"]} {b["hora"]}: {m}')
-        outros = [t for t in descartes_filtro
-                  if (t[0]['data'], t[0]['hora']) not in NAO_ASSINADAS_NOTAVEIS]
-        r(f'  demais descartes não-assinados: {len(outros)}')
-        for b, txt, motivo in outros:
-            resumo = re.sub(r'\s+', ' ', txt)[:60]
-            r(f'    · {b["data"]} {b["hora"]} [{b.get("remetente")}] ({motivo}) {resumo!r}')
-    else:
-        r('  (nenhum dump no formato exportação — modo somente core)')
+    meta('bolhas', len(blocos))
+    for nome in ('mídia oculta', 'mensagem apagada', 'ligação', 'vazia'):
+        meta(nome, ruido.get(nome, 0))
+    pelo_filtro = [reg for reg in registros if not reg['allowlist']]
+    meta('candidatas', len(pelo_filtro))
+    meta('estritas', n_estritas)
+    r(f'  incluídas por allowlist (além do filtro): {len(registros) - len(pelo_filtro)}')
+    anos = Counter(reg['data_original'][:4] for reg in pelo_filtro)
+    r(f'  candidatas por ano: {dict(sorted(anos.items()))} '
+      f'(esperado 166/315/311/205 = estritas 165/315/310/205 + 2 typos)')
+    notaveis = [(b, m) for b, _, m in descartes_filtro
+                if (b['data'], b['hora']) in NAO_ASSINADAS_NOTAVEIS]
+    r('  casos notáveis fora do filtro:')
+    for b, m in notaveis:
+        r(f'    • {b["data"]} {b["hora"]}: {m}')
+    outros = [t for t in descartes_filtro
+              if (t[0]['data'], t[0]['hora']) not in NAO_ASSINADAS_NOTAVEIS]
+    r(f'  demais descartes não-assinados: {len(outros)}')
+    for b, txt, motivo in outros:
+        resumo = re.sub(r'\s+', ' ', txt)[:60]
+        r(f'    · {b["data"]} {b["hora"]} [{b.get("remetente")}] ({motivo}) {resumo!r}')
 
     # ---------- decisões editoriais ----------
     r()
@@ -653,20 +652,19 @@ def main():
     domingos, descartadas, remapeadas = [], [], []
     for reg in registros:
         e = reg['entrada']
-        if reg['fonte'] == 'export':
-            decisao = DESCARTAR_EXPORT.get((reg['data_original'], reg['hora']))
-            if decisao:
-                descartadas.append(f"{reg['data_original']} {reg['hora']} — {decisao}")
-                continue
-            if EXCLUIR_DOMINGO and eh_domingo(reg['data_original']):
-                domingos.append(f"{reg['data_original']} {reg['hora']} {e['titulo']}")
-                continue
+        decisao = DESCARTAR_EXPORT.get((reg['data_original'], reg['hora']))
+        if decisao:
+            descartadas.append(f"{reg['data_original']} {reg['hora']} — {decisao}")
+            continue
+        if EXCLUIR_DOMINGO and eh_domingo(reg['data_original']):
+            domingos.append(f"{reg['data_original']} {reg['hora']} {e['titulo']}")
+            continue
         chave = (e['data'], chave_titulo(e['titulo'] or ''))
         if chave in DESCARTAR:
-            descartadas.append(f"{e['data']} {e['titulo']} [{reg['fonte']}]")
+            descartadas.append(f"{e['data']} {e['titulo']}")
             continue
         if chave in REMAPEAR:
-            remapeadas.append(f"{e['titulo']}: {e['data']} -> {REMAPEAR[chave]} [{reg['fonte']}]")
+            remapeadas.append(f"{e['titulo']}: {e['data']} -> {REMAPEAR[chave]}")
             e['data'] = REMAPEAR[chave]
         finais.append(reg)
     r(f'  domingos excluídos ({len(domingos)}):')
@@ -675,42 +673,13 @@ def main():
     r(f'  descartadas por decisão ({len(descartadas)}): ' + '; '.join(descartadas))
     r(f'  remapeadas ({len(remapeadas)}): ' + '; '.join(remapeadas))
 
-    # ---------- preferência de fonte (mesma data, fontes diferentes) ----------
-    r()
-    r('— Preferência de fonte (data repetida entre dumps; 1º dump vence) —')
-    vistos = {}
-    apos_fonte = []
-    n_pref, piores = 0, []
-    for reg in finais:
-        d = reg['entrada']['data']
-        primeiro = vistos.get(d)
-        if primeiro and primeiro['fonte'] != reg['fonte']:
-            n_pref += 1
-            ratio = difflib.SequenceMatcher(
-                None, norm_filtro(primeiro['entrada']['corpo']),
-                norm_filtro(reg['entrada']['corpo'])).ratio()
-            if ratio < 0.95:
-                piores.append((d, reg['entrada']['titulo'], ratio))
-            continue
-        if not primeiro:
-            vistos[d] = reg
-        apos_fonte.append(reg)
-    r(f'  cópias da exportação preteridas pelo core: {n_pref} '
-      f'(esperado 65 = 64 mesmas datas + 1 remapeada)')
-    if piores:
-        r('  ⚠ corpos com similaridade < 0,95 entre as fontes (CONFERIR À MÃO):')
-        for d, t, ratio in piores:
-            r(f'    ✗ {d} {t}: {ratio:.3f}')
-    else:
-        r('  todos os corpos preteridos têm similaridade ≥ 0,95 com o core ✓')
-
     # ---------- dedup por corpo extraído ----------
     r()
     r('— Dedup por corpo extraído (retransmissões e cópias mesmo-dia) —')
     grupos = {}
-    for reg in apos_fonte:
+    for reg in finais:
         grupos.setdefault(norm_filtro(reg['entrada']['corpo']), []).append(reg)
-    ocupacao = Counter(reg['entrada']['data'] for reg in apos_fonte)
+    ocupacao = Counter(reg['entrada']['data'] for reg in finais)
     removidos = set()
     n_grupos = 0
     for corpo_n in sorted(grupos, key=lambda c: min(r_['entrada']['data'] for r_ in grupos[c])):
@@ -718,9 +687,10 @@ def main():
         if len(grupo) < 2:
             continue
         n_grupos += 1
-        com_core = [g for g in grupo if g['fonte'] == 'core']
+        # Fica a cópia que cai em dia livre (precedente de O REINO DOS CÉUS);
+        # no empate, a mais antiga.
         livres = [g for g in grupo if ocupacao[g['entrada']['data']] == 1]
-        manter = (com_core or sorted(livres or grupo, key=lambda g: g['entrada']['data']))[0]
+        manter = sorted(livres or grupo, key=lambda g: g['entrada']['data'])[0]
         datas = ', '.join(f"{g['entrada']['data']}{'*' if g is manter else ''}" for g in grupo)
         r(f'  grupo: {grupo[0]["entrada"]["titulo"]} [{datas}] (* = mantida)')
         for g in grupo:
@@ -728,9 +698,8 @@ def main():
                 removidos.add(id(g))
                 ocupacao[g['entrada']['data']] -= 1
     r(f'  grupos com 2+ cópias: {n_grupos}; cópias removidas: {len(removidos)}')
-    r('  (plano previa 16 grupos/18 cópias ANTES das exclusões de domingo '
-      'e da preferência de fonte — a diferença deve se explicar por elas)')
-    apos_dedup = [reg for reg in apos_fonte if id(reg) not in removidos]
+    r('  (o plano previa 16 grupos/18 cópias ANTES das exclusões de domingo)')
+    apos_dedup = [reg for reg in finais if id(reg) not in removidos]
 
     # ---------- validação 1 mensagem/dia ----------
     contagem = Counter(reg['entrada']['data'] for reg in apos_dedup)
@@ -767,7 +736,7 @@ def main():
     problemas = []
     for reg in apos_dedup:
         e = reg['entrada']
-        onde = f"{e['data']} ({reg['fonte']} {reg['hora']}) {e['titulo']!r}"
+        onde = f"{e['data']} ({reg['hora']}) {e['titulo']!r}"
         if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', e['data'] or ''):
             problemas.append(f'data inválida: {onde}')
         if not e['titulo']:

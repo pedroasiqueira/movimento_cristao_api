@@ -14,11 +14,16 @@ npm run start:dev           # API em http://localhost:3000
 
 O seed lê, por padrão, `src/data/mensagens.json` e `src/data/musicas.json` (desta própria API). Outros caminhos: `npm run seed -- caminho/mensagens.json caminho/musicas.json`. É idempotente: rodar de novo atualiza em vez de duplicar. Atenção: além das mensagens, o seed também upserta o admin (com `ADMIN_*` do `.env`) e as músicas — confira o `.env` antes de rodá-lo contra produção.
 
-O `src/data/mensagens.json` (e a cópia-reserva empacotada no site) é gerado por `scripts/reconstruir_mensagens.py` a partir dos dumps brutos do WhatsApp. O histórico completo (jun/2023 em diante) vem da exportação oficial da conversa, que fica **fora do repositório** por privacidade (`../export-whatsapp.txt`; há trava no `.gitignore`). Comando canônico — a ordem dos dumps garante que o corpus curado vence em data repetida:
+O `src/data/mensagens.json` (e a cópia-reserva empacotada no site) é gerado por `scripts/reconstruir_mensagens.py`. A **fonte única de verdade** é a exportação oficial da conversa no WhatsApp, com o histórico completo desde jun/2023. Ela fica **fora do repositório** por privacidade — contém conversa pessoal e os repositórios são públicos —, em `../export-whatsapp.txt` (trava no `.gitignore`; original guardado no Drive):
 
 ```bash
-python3 scripts/reconstruir_mensagens.py dados-brutos/core.json ../export-whatsapp.txt
+python3 scripts/reconstruir_mensagens.py          # usa ../export-whatsapp.txt
+python3 scripts/testar_extracao.py                # regressão da extração
 ```
+
+O parser é determinístico e idempotente: reconstrói o corpus inteiro, aplica as decisões editoriais registradas em código (descartes, remapeamentos de dias com 2+ mensagens, domingos fora), deduplica por corpo, valida uma mensagem por dia e herda as tags da versão anterior. Ele aborta **antes** de gravar se algo não fecha, e escreve o relatório completo em `../relatorio-importacao-whatsapp.txt`.
+
+Como a fonte real não é versionada, `dados-brutos/` guarda uma **amostra** dela (`amostra-export.txt`, só bolhas assinadas — conteúdo já público no site, remetente anonimizado) com o gabarito da extração (`amostra-esperada.json`), cobrindo os casos difíceis: as 4 eras de layout, typos na assinatura, rodapés colados, títulos fora do padrão. É o que `scripts/testar_extracao.py` exercita; use `--atualizar` para regravar o gabarito quando a mudança for intencional.
 
 ## Rotas
 

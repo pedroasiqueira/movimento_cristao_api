@@ -3,8 +3,8 @@
  *   node --require ts-node/register src/scripts/seed.ts [mensagens.json] [musicas.json]
  * Sem argumentos, lê src/data/mensagens.json e src/data/musicas.json —
  * a API semeia sozinha, sem depender do repositório do site ao lado.
- * (mensagens.json é gerado por scripts/reconstruir_mensagens.py a partir
- * do dump bruto em dados-brutos/.)
+ * (mensagens.json é gerado por scripts/reconstruir_mensagens.py a partir da
+ * exportação do WhatsApp, que fica fora do repositório — ver README.)
  * Idempotente: upsert por data (mensagens) e slug (músicas) — rodar de novo
  * atualiza em vez de duplicar. O admin vem de ADMIN_EMAIL/ADMIN_PASSWORD.
  */
