@@ -1,9 +1,15 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import compression from 'compression';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Compressão HTTP: o acervo é texto puro e encolhe ~3,7×. Se um dia houver
+  // nginx com gzip na frente, não há dupla compressão — ele pula respostas
+  // que já chegam com Content-Encoding.
+  app.use(compression());
 
   // Diferente do dacapo, whitelist+transform desde o início: DTOs descartam
   // campos extras (ex.: o "id" que o formulário admin envia) e convertem

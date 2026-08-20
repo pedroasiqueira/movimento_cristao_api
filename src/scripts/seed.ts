@@ -13,6 +13,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import * as bcrypt from 'bcrypt';
 import { connect, disconnect, model } from 'mongoose';
+import { termosDe } from '../mensagens/busca.util';
 import { MensagemSchema } from '../mensagens/mensagens.model';
 import { MusicaSchema } from '../musicas/musicas.model';
 import { UsuarioSchema } from '../users/users.model';
@@ -88,6 +89,9 @@ async function main() {
           proveniencia: m.proveniencia ?? null,
           canal: m.canal ?? null,
           tags: m.tags ?? [],
+          // updateOne não passa pelo pre('save') do model — os termos de
+          // busca (FR-7) são calculados aqui com o mesmo tokenizador.
+          ...termosDe(m),
         },
         $setOnInsert: { publicarEm: null },
       },

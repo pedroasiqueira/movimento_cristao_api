@@ -31,9 +31,11 @@ Como a fonte real não é versionada, `dados-brutos/` guarda uma **amostra** del
 |---|---|---|
 | `POST /auth/login` | público | `{ email, password }` → `{ access_token }` (JWT 7d) |
 | `GET /auth/me` | Bearer | dados de quem está logado |
-| `GET /mensagens` | público | publicadas, mais recente primeiro (agendadas ficam fora — FR-9) |
+| `GET /mensagens` | público | o índice leve `{ total, itens: [{data, titulo, tags}] }`, mais recente primeiro (agendadas ficam fora — FR-9). `?formato=completo` devolve o contrato antigo (documentos inteiros); `?desde=AAAA-MM-DD&limite=N` é o cursor de reserva para quando o acervo pesar |
+| `GET /mensagens/destaque` | público | `{ hoje, total, mensagem }` — a mensagem de hoje (ou a mais recente) com a data de referência pelo relógio do servidor; é o primeiro conteúdo da home (~2 KB) |
+| `GET /mensagens/busca` | público | busca com o ranking do site (FR-7): `?q=&tag=&de=&ate=&limite=` → `{ total, itens }`. Exige os campos `termos*` — rode o backfill abaixo |
 | `GET /mensagens/tags` | público | vocabulário de tags em uso (FR-6) |
-| `GET /mensagens/:data` | público | uma mensagem por `AAAA-MM-DD` (FR-3) |
+| `GET /mensagens/:data` | público | uma mensagem por `AAAA-MM-DD` (FR-3) — é aqui que o corpo desce, sob demanda |
 | `GET /mensagens/agendadas/lista` | admin | o que está programado e ainda não apareceu (FR-9) |
 | `POST /mensagens` | admin | cria; `409` se o dia já tem mensagem |
 | `PATCH /mensagens/:data` | admin | corrige texto/título/tags preservando o endereço (FR-20) |
@@ -43,3 +45,14 @@ Como a fonte real não é versionada, `dados-brutos/` guarda uma **amostra** del
 | `PATCH /musicas/:slug` | admin | corrige; `despublicada: true` retira de circulação (FR-21) |
 
 Não há `DELETE`: endereços publicados são permanentes (PRD §7). Não há cadastro público de usuários (PRD §8, LGPD) — o admin nasce do seed.
+
+## Desempenho e busca
+
+As rotas públicas saem comprimidas (gzip/brotli — `compression` no bootstrap) e com `Cache-Control` + `ETag`: o acervo muda poucas vezes por dia e o público reabre o site diariamente. A listagem circula **sem o corpo** das mensagens (~3% do peso); o texto inteiro desce por `GET /mensagens/:data` quando alguém abre a leitura.
+
+A busca (FR-7) roda aqui com o MESMO algoritmo que vivia no navegador — tokenizador canônico em `src/mensagens/busca.util.ts` (fonte única do vocabulário; o site espelha só a queda offline por títulos), ranking por aggregation sobre os campos internos `termosTitulo/termosTags/termosCorpo`. Mensagens novas ganham os termos no `pre('save')`; para o acervo existente (ou após mudar o vocabulário):
+
+```bash
+node --require ts-node/register src/scripts/backfill-termos.ts   # idempotente
+node scripts/testar-equivalencia-busca.mjs                        # ranking idêntico ao original, com a API de pé
+```

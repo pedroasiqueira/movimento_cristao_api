@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
+import { termosDe } from './busca.util';
 
 /*
  * Uma Mensagem por dia: o endereço público é a própria data (FR-3) e o
@@ -46,9 +47,42 @@ export class Mensagem {
   @Prop({ type: Date, default: null })
   publicarEm: Date | null;
 
+  /*
+   * Termos canônicos para a busca (FR-7) — derivados de titulo/tags/corpo
+   * pelo tokenizador de busca.util.ts, no pre('save') abaixo. Internos:
+   * select:false os mantém fora de toda resposta da API; os índices multikey
+   * fazem o $match da busca ser indexado. Mensagens anteriores a este campo
+   * são preenchidas por scripts/backfill-termos.ts (e pelo seed).
+   */
+  @Prop({ type: [String], select: false, index: true })
+  termosTitulo?: string[];
+
+  @Prop({ type: [String], select: false, index: true })
+  termosTags?: string[];
+
+  @Prop({ type: [String], select: false, index: true })
+  termosCorpo?: string[];
+
   createdAt?: Date;
   updatedAt?: Date;
 }
 
 export type MensagemDocument = Mensagem & Document;
 export const MensagemSchema = SchemaFactory.createForClass(Mensagem);
+
+// Cobre a leitura pública: filtro por publicarEm ($or usa as duas pontas do
+// campo) já ordenado por data descendente — sem varredura nem sort em memória.
+MensagemSchema.index({ publicarEm: 1, data: -1 });
+
+// Escreveu titulo/tags/corpo → os termos de busca acompanham. Vale para o
+// create() e para o update() (Object.assign + save) do service; cargas por
+// updateOne (seed, backfill) calculam os termos por conta própria.
+MensagemSchema.pre('save', function () {
+  if (
+    this.isModified('titulo') ||
+    this.isModified('tags') ||
+    this.isModified('corpo')
+  ) {
+    Object.assign(this, termosDe(this));
+  }
+});
