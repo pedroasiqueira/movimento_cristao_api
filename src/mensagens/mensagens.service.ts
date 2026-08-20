@@ -52,8 +52,9 @@ export class MensagensService {
     return this.mensagemModel.create(dto);
   }
 
-  /** Todas as publicadas, documento completo — mantida para compatibilidade
-   *  (GET /mensagens?formato=completo). A listagem normal é findLista. */
+  /** Todas as publicadas, documento completo (GET /mensagens?formato=completo).
+   *  Não é rota de navegador: quem a chama é a pré-renderização do site, uma
+   *  vez por build. A listagem que o site usa em tempo real é findLista. */
   findPublicadas() {
     return this.mensagemModel
       .find(publicada())
