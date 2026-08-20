@@ -23,7 +23,7 @@ export class SecaoDto {
 
 // Espelha o JSON que o formulário da Área Admin do site gera. O campo "id"
 // que o formulário inclui é descartado pelo whitelist do ValidationPipe —
-// o slug nasce do título aqui no servidor, com a mesma normalização.
+// o código do endereço é sorteado aqui no servidor, não vem de fora.
 export class CreateMusicaDto {
   @IsString()
   @IsNotEmpty({ message: 'A música precisa de um título.' })

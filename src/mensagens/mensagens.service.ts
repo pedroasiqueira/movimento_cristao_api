@@ -52,8 +52,9 @@ export class MensagensService {
     return this.mensagemModel.create(dto);
   }
 
-  /** Todas as publicadas, documento completo — mantida para compatibilidade
-   *  (GET /mensagens?formato=completo). A listagem normal é findLista. */
+  /** Todas as publicadas, documento completo (GET /mensagens?formato=completo).
+   *  Não é rota de navegador: quem a chama é a pré-renderização do site, uma
+   *  vez por build. A listagem que o site usa em tempo real é findLista. */
   findPublicadas() {
     return this.mensagemModel
       .find(publicada())
@@ -252,5 +253,23 @@ export class MensagensService {
     }
     Object.assign(mensagem, dto);
     return mensagem.save();
+  }
+
+  /**
+   * Exclusão definitiva — o documento sai do banco e o endereço passa a
+   * responder 404 (ver a nota em mensagens.model.ts).
+   *
+   * Sem o filtro publicada(), pelo mesmo motivo do update: uma mensagem ainda
+   * agendada também precisa poder sair, e ela não casa com publicada().
+   *
+   * Devolve a data em vez do documento: quem chama já sabe o que pediu, e o
+   * corpo de uma mensagem apagada não tem por que trafegar de volta.
+   */
+  async remove(data: string) {
+    const apagada = await this.mensagemModel.findOneAndDelete({ data }).exec();
+    if (!apagada) {
+      throw new NotFoundException('Não há mensagem nessa data.');
+    }
+    return { data };
   }
 }

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -31,9 +32,9 @@ export class MusicasController {
       : this.musicasService.findPublicadas();
   }
 
-  @Get(':slug')
-  findOne(@Param('slug') slug: string) {
-    return this.musicasService.findPorSlug(slug);
+  @Get(':codigo')
+  findOne(@Param('codigo') codigo: string) {
+    return this.musicasService.findPorCodigo(codigo);
   }
 
   // ---- Escrita do administrador ----
@@ -47,8 +48,17 @@ export class MusicasController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  @Patch(':slug')
-  update(@Param('slug') slug: string, @Body() dto: UpdateMusicaDto) {
-    return this.musicasService.update(slug, dto);
+  @Patch(':codigo')
+  update(@Param('codigo') codigo: string, @Body() dto: UpdateMusicaDto) {
+    return this.musicasService.update(codigo, dto);
+  }
+
+  /** Apaga de verdade — ver a nota em musicas.model.ts. Retirar de circulação
+   *  sem quebrar o endereço continua sendo o PATCH com `despublicada`. */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Delete(':codigo')
+  remove(@Param('codigo') codigo: string) {
+    return this.musicasService.remove(codigo);
   }
 }

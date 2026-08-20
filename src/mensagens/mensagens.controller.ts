@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Header,
   Param,
@@ -45,8 +46,15 @@ export class MensagensController {
 
   /**
    * Padrão: o índice leve `{ total, itens: [{data, titulo, tags}] }` — ~3%
-   * do peso do acervo completo. `?formato=completo` preserva o contrato
-   * antigo (lista de documentos inteiros) para quem ainda depender dele.
+   * do peso do acervo completo.
+   *
+   * `?formato=completo` NÃO é mais compatibilidade: desde 20/08/2026 é a fonte
+   * de dados da pré-renderização do site (movimento_cristao/scripts/prerender.mjs),
+   * que gera uma página HTML por Mensagem a cada build. Uma requisição no lugar
+   * de novecentas. Removê-la não quebra o build de forma visível — ele cai em
+   * silêncio para a cópia versionada do acervo e passa a publicar páginas
+   * paradas no tempo.
+   *
    * `desde` (exclusivo, mais antigas que) e `limite` são o cursor de reserva
    * para quando o acervo crescer a ponto de o índice inteiro pesar.
    */
@@ -129,5 +137,14 @@ export class MensagensController {
   @Patch(':data')
   update(@Param('data') data: string, @Body() dto: UpdateMensagemDto) {
     return this.mensagensService.update(data, dto);
+  }
+
+  /** Apaga de verdade — ver a nota em mensagens.model.ts. Nenhuma rota DELETE
+   *  fixa vem antes, então o :data não engole ninguém. */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Delete(':data')
+  remove(@Param('data') data: string) {
+    return this.mensagensService.remove(data);
   }
 }

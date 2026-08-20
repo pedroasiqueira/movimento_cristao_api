@@ -5,8 +5,13 @@ import { termosDe } from './busca.util';
 /*
  * Uma Mensagem por dia: o endereço público é a própria data (FR-3) e o
  * índice único garante isso no banco — mitigação combinada da escolha
- * não-relacional. Não existe DELETE em rota nenhuma: endereços publicados
- * são permanentes (PRD §7); consertar é PATCH (FR-20).
+ * não-relacional. Consertar é PATCH (FR-20), e é o caminho normal.
+ *
+ * DELETE existe desde 20/08/2026 e apaga de verdade — decisão do Pedro, que
+ * abre a segunda exceção à permanência de endereços do PRD §7 (a primeira é
+ * FR-21). O endereço passa a responder 404, e um link colado no WhatsApp
+ * quebra: por isso o guarda-corpo é no site, um modal que diz em voz alta que
+ * a exclusão não pode ser desfeita, e não uma lixeira aqui no banco.
  */
 @Schema({ timestamps: true, collection: 'mensagens' })
 export class Mensagem {
