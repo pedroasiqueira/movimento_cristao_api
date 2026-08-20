@@ -5,7 +5,7 @@
  * a API semeia sozinha, sem depender do repositório do site ao lado.
  * (mensagens.json é gerado por scripts/reconstruir_mensagens.py a partir da
  * exportação do WhatsApp, que fica fora do repositório — ver README.)
- * Idempotente: upsert por data (mensagens) e slug (músicas) — rodar de novo
+ * Idempotente: upsert por data (mensagens) e código (músicas) — rodar de novo
  * atualiza em vez de duplicar. O admin vem de ADMIN_EMAIL/ADMIN_PASSWORD.
  */
 import 'dotenv/config';
@@ -109,7 +109,7 @@ async function main() {
   ) as MusicaJson[];
   for (const m of musicas) {
     await Musica.updateOne(
-      { slug: m.id },
+      { codigo: m.id },
       {
         $set: {
           titulo: m.titulo,

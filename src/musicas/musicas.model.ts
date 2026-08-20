@@ -12,14 +12,23 @@ export class Secao {
 const SecaoSchema = SchemaFactory.createForClass(Secao);
 
 /*
- * O slug é o endereço público (/musica/<slug> — FR-14) e é único no banco.
+ * O código é o endereço público (/musica/<codigo>/<titulo-legivel> — FR-14) e é
+ * único no banco. Ele é SORTEADO, não derivado do título: até 20/08/2026 o
+ * endereço era o slug do título, e corrigir o título condenava a música a um
+ * endereço que mentia para sempre. Agora o título é conteúdo livre e o trecho
+ * legível do endereço é enfeite — quem resolve é o código.
+ *
+ * Chama-se `codigo`, e não `id`, porque o Mongoose já cria uma virtual `id`
+ * (o _id em string) e um caminho real de mesmo nome colidiria com ela. O site
+ * traduz para `id` na fronteira (movimento_cristao/src/lib/musicas.js).
+ *
  * Não existe DELETE: retirar de circulação é despublicar (FR-21) — o
  * endereço continua respondendo, a listagem e a busca é que a escondem.
  */
 @Schema({ timestamps: true, collection: 'musicas' })
 export class Musica {
   @Prop({ required: true, unique: true })
-  slug: string;
+  codigo: string;
 
   @Prop({ required: true, trim: true })
   titulo: string;

@@ -31,9 +31,9 @@ export class MusicasController {
       : this.musicasService.findPublicadas();
   }
 
-  @Get(':slug')
-  findOne(@Param('slug') slug: string) {
-    return this.musicasService.findPorSlug(slug);
+  @Get(':codigo')
+  findOne(@Param('codigo') codigo: string) {
+    return this.musicasService.findPorCodigo(codigo);
   }
 
   // ---- Escrita do administrador ----
@@ -47,8 +47,8 @@ export class MusicasController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  @Patch(':slug')
-  update(@Param('slug') slug: string, @Body() dto: UpdateMusicaDto) {
-    return this.musicasService.update(slug, dto);
+  @Patch(':codigo')
+  update(@Param('codigo') codigo: string, @Body() dto: UpdateMusicaDto) {
+    return this.musicasService.update(codigo, dto);
   }
 }
