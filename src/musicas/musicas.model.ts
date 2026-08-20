@@ -22,8 +22,13 @@ const SecaoSchema = SchemaFactory.createForClass(Secao);
  * (o _id em string) e um caminho real de mesmo nome colidiria com ela. O site
  * traduz para `id` na fronteira (movimento_cristao/src/lib/musicas.js).
  *
- * Não existe DELETE: retirar de circulação é despublicar (FR-21) — o
- * endereço continua respondendo, a listagem e a busca é que a escondem.
+ * Retirar de circulação é despublicar (FR-21) — o endereço continua
+ * respondendo, a listagem e a busca é que a escondem. É o caminho normal.
+ *
+ * DELETE existe desde 20/08/2026 e apaga de verdade — decisão do Pedro. Ao
+ * contrário da despublicação, o endereço deixa de existir e um link colado no
+ * WhatsApp quebra: o guarda-corpo é o modal de confirmação do site, que avisa
+ * que a exclusão é permanente.
  */
 @Schema({ timestamps: true, collection: 'musicas' })
 export class Musica {

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -50,5 +51,14 @@ export class MusicasController {
   @Patch(':codigo')
   update(@Param('codigo') codigo: string, @Body() dto: UpdateMusicaDto) {
     return this.musicasService.update(codigo, dto);
+  }
+
+  /** Apaga de verdade — ver a nota em musicas.model.ts. Retirar de circulação
+   *  sem quebrar o endereço continua sendo o PATCH com `despublicada`. */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Delete(':codigo')
+  remove(@Param('codigo') codigo: string) {
+    return this.musicasService.remove(codigo);
   }
 }

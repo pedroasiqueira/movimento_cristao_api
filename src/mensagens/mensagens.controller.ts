@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Header,
   Param,
@@ -136,5 +137,14 @@ export class MensagensController {
   @Patch(':data')
   update(@Param('data') data: string, @Body() dto: UpdateMensagemDto) {
     return this.mensagensService.update(data, dto);
+  }
+
+  /** Apaga de verdade — ver a nota em mensagens.model.ts. Nenhuma rota DELETE
+   *  fixa vem antes, então o :data não engole ninguém. */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Delete(':data')
+  remove(@Param('data') data: string) {
+    return this.mensagensService.remove(data);
   }
 }

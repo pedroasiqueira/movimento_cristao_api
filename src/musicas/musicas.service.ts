@@ -103,4 +103,19 @@ export class MusicasService {
     Object.assign(musica, mudancas);
     return musica.save();
   }
+
+  /**
+   * Exclusão definitiva — diferente de despublicar (FR-21), aqui o endereço
+   * deixa de existir. Ver a nota em musicas.model.ts.
+   *
+   * Devolve o código em vez do documento: a letra apagada não tem por que
+   * trafegar de volta.
+   */
+  async remove(codigo: string) {
+    const apagada = await this.musicaModel.findOneAndDelete({ codigo }).exec();
+    if (!apagada) {
+      throw new NotFoundException('Não há música nesse endereço.');
+    }
+    return { codigo };
+  }
 }
